@@ -66,6 +66,7 @@ class FakeGitHub:
 def gh(tmp_path, monkeypatch):
     monkeypatch.setenv("REPO_PULSE_HOME", str(tmp_path))
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.delenv("REPO_PULSE_GITHUB_TOKEN", raising=False)
     fake = FakeGitHub()
     monkeypatch.setattr(rp, "_request", fake)
     return fake
@@ -93,7 +94,7 @@ def test_cap_without_token(gh, capsys, monkeypatch):
     for n in ("a/one", "a/two", "a/three"):
         gh.add(n)
     rc, out = run(capsys, "add", "a/one", "a/two", "a/three")
-    assert rc == 1 and "watchlist is full (2 repos without GITHUB_TOKEN)" in out
+    assert rc == 1 and "watchlist is full (2 repos without a GitHub token)" in out
 
 
 def test_first_report_sets_baseline_then_detects_changes(gh, capsys):
@@ -151,7 +152,7 @@ def test_rate_limit_is_reported_not_raised(gh, capsys):
     run(capsys, "add", "o/r", "o/s")
     gh.rate_limited = True
     rc, out = run(capsys, "report")
-    assert rc == 1 and "rate limit reached" in out and "set GITHUB_TOKEN" in out and "skipped: rate limit" in out
+    assert rc == 1 and "rate limit reached" in out and "set REPO_PULSE_GITHUB_TOKEN" in out and "skipped: rate limit" in out
 
 
 def test_token_sent_only_as_header_never_printed(gh, capsys, monkeypatch):
@@ -227,3 +228,14 @@ def test_unexpected_shape_is_a_per_repo_error(gh, capsys, monkeypatch):
     rc, out = run(capsys, "report", "--json")
     s = json.loads(out)
     assert rc == 1 and [e["repo"] for e in s["errors"]] == ["o/r"] and [x["repo"] for x in s["repos"]] == ["o/s"]
+
+
+def test_skill_token_name_wins_and_github_token_is_fallback(gh, capsys, monkeypatch):
+    gh.add("o/r")
+    monkeypatch.setenv("GITHUB_TOKEN", "fallback-token")
+    run(capsys, "add", "o/r")
+    assert gh.calls[-1][1]["Authorization"] == "Bearer fallback-token"
+    monkeypatch.setenv("REPO_PULSE_GITHUB_TOKEN", "skill-token")
+    run(capsys, "list")
+    rp.GitHub().get("/repos/o/r")
+    assert gh.calls[-1][1]["Authorization"] == "Bearer skill-token"

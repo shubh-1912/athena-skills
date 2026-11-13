@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """repo-pulse: watch public GitHub repos and report what changed since the last check.
 
-Standard library only (Python >= 3.10). No credentials are required; an optional GITHUB_TOKEN raises the
-GitHub API limit from 60 to 5,000 requests/hour. The token is only ever sent to api.github.com and is
-never printed.
+Standard library only (Python >= 3.10). No credentials are required; an optional token raises the GitHub
+API limit from 60 to 5,000 requests/hour. It is read from REPO_PULSE_GITHUB_TOKEN (the name SKILL.md
+declares, because Hermes keeps GITHUB_TOKEN out of terminal commands), else GITHUB_TOKEN. It is only ever
+sent to api.github.com and never printed.
 
   repo_pulse.py add owner/repo [owner/repo ...]   validate (public repos only) and add to the watchlist
   repo_pulse.py remove owner/repo                 remove from the watchlist
@@ -135,7 +136,9 @@ def _request(url: str, headers: dict) -> tuple[int, dict, bytes]:
 
 class GitHub:
     def __init__(self, token: str | None = None):
-        self.token = token if token is not None else os.environ.get("GITHUB_TOKEN", "").strip()
+        if token is None:
+            token = os.environ.get("REPO_PULSE_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        self.token = token.strip()
         self.cache: dict = _load("cache.json", {})
         self.calls = 0
         self.remaining: str | None = None
@@ -160,7 +163,7 @@ class GitHub:
             reset = h.get("x-ratelimit-reset", "")
             when = iso(dt.datetime.fromtimestamp(int(reset), dt.timezone.utc)) if reset.isdigit() else "later"
             raise GitHubError(status, f"rate limit reached; resets at {when}"
-                              + ("" if self.token else " (set GITHUB_TOKEN for 5,000/hour)"))
+                              + ("" if self.token else " (set REPO_PULSE_GITHUB_TOKEN for 5,000/hour)"))
         if status >= 400:
             try:
                 msg = json.loads(body).get("message", "")
@@ -342,7 +345,7 @@ def add_repos(names: list[str], gh: GitHub | None = None) -> list[dict]:
             out.append({"input": r, "repo": full, "ok": True, "message": f"= {full} is already watched"})
         elif len(repos) >= cap:
             out.append({"input": r, "repo": full, "ok": False,
-                        "message": f"✗ watchlist is full ({cap} repos{'' if gh.token else ' without GITHUB_TOKEN'})"})
+                        "message": f"✗ watchlist is full ({cap} repos{'' if gh.token else ' without a GitHub token'})"})
         else:
             repos.append(full)
             out.append({"input": r, "repo": full, "ok": True, "message": f"✓ watching {full}"})

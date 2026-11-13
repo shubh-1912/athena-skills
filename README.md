@@ -15,8 +15,9 @@ hermes skills install shubh-1912/athena-skills/skills/repo-pulse
 
 Then ask your agent: *"Watch NousResearch/hermes-agent and ollama/ollama, then give me a pulse report."*
 
-repo-pulse uses only the Python standard library and needs no credentials. An optional `GITHUB_TOKEN`
-(fine-grained, read-only, public repositories) raises GitHub's API limit from 60 to 5,000 requests per hour.
+repo-pulse uses only the Python standard library and needs no credentials. An optional
+`REPO_PULSE_GITHUB_TOKEN` (fine-grained, read-only, public repositories) raises GitHub's API limit from 60 to
+5,000 requests per hour. (Hermes keeps `GITHUB_TOKEN` out of terminal commands, so the skill uses its own name.)
 
 ## Development
 
