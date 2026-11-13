@@ -1,7 +1,7 @@
 ---
 name: repo-pulse
 description: "Watch public GitHub repos and report what changed since the last check: releases, commits, CI, PRs, issues, stars."
-version: 1.0.0
+version: 1.0.1
 author: Shubh Mishra
 license: MIT
 platforms: [linux, macos]
@@ -42,11 +42,13 @@ Paths are relative to this skill's directory. State lives in `~/.hermes/repo_pul
 
 ## Procedure
 
-1. **Adding:** run `add` with each `owner/repo`. The script checks that the repo exists and is public, and
-   prints `✓ watching …` or the reason it refused. Report that line to the user.
-2. **Reporting:** run `report`. The first report for a repo sets a baseline ("first check"); later reports
-   show changes since the previous report. Summarize each repo in one or two lines, leading with what is
-   new: a release marked `NEW`, CI that turned red, or a large star change. Mention quiet repos briefly.
+1. **Adding:** whenever the user says "watch", "track" or "follow" a repo, FIRST run `add` with each
+   `owner/repo`, even if a report is also requested. The script checks that the repo exists and is public,
+   and prints `✓ watching …` or the reason it refused. Report that line to the user.
+2. **Reporting:** then run `report` (no arguments = every watched repo). The first report for a repo sets a
+   baseline ("first check"); later reports show changes since the previous report. Build the answer **only
+   from the script's output** (don't mix in web searches or guesses): one or two lines per repo, leading with
+   what is new: a release marked `NEW`, CI that turned red, or a large star change.
 3. **Scheduled alerts:** run `alerts --json`. It has its own baseline, so a manual report never swallows an
    alert. Notify only when `alerts` is non-empty; each alert is `new_release` or `ci_failed`.
 4. **Rate limits:** without a token GitHub allows 60 requests per hour (about 5 per repo per report). If the
